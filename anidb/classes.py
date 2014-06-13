@@ -8,34 +8,31 @@ QUALITY = ['unknown', 'TV', 'DVD', 'BD']
 class Series(object):
     """An anime series. Contain information about all files"""
     
-    def __init__(self, location="", episode_number=0):  
+    def __init__(self, location="", episode_number=99):  
         """Set default values for a blank series"""
+        self.name = ""
         self.location = location
         self.episode_number = episode_number
-        self.episode_list = [None for i in range(episode_number)]
+        self.episode_list = {}
         #quality = QUALITY[0] 
     
     def get_episode(self, number):
         return self.episode_list[number]
         
-    def get_episode_list(self):
-        list = [None]
-        for episode in self.episode_list:
-            list.append(episode)
-        return list
+
         
     def print_episode_list(self):
-        for episode in self.episode_list:
-            if episode != None:
-                print episode.filename
-            else: # no episode there yet
-                pass
+        for episode in self.episode_list:            
+            print self.episode_list[episode].filename
+            
            
-    def add_episode(self, episode):
-        if self.episode_list[episode.number] != None:
+    def add_episode(self, new_Episode):
+        if new_Episode.number in self.episode_list:
             print "Error. Already have that episode"
         else:
-            self.episode_list[episode.number] = episode
+            print "Adding episode:", new_Episode.number
+            self.episode_list[new_Episode.number] = new_Episode
+            
     
     
     
@@ -66,7 +63,7 @@ class Episode(object):
        
     def right_path(filepath):
         """Check if the path recorded corresponds to file"""
-        return os.isfile(filepath)
+        return path.isfile(filepath)
     
     def get_crc32():
         """Return CRC32 hash of file
@@ -106,7 +103,7 @@ class Episode(object):
 For checking directories use
     os.listdir
     os.path.isdir
-    os.isfile
+    path.isfile
 Python has crc32 in stdlib
 
 """
