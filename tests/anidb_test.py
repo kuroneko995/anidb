@@ -2,8 +2,6 @@ from nose.tools import *
 from anidb import classes
 
 
-def test_basic():
-    print "I RAN!"
 
 def test_filename():    
     ep1 = classes.Episode(1, "A34F324CD", "[FFF] Black Bullet 01 [A34F324CD].mkv", "D:\Download\[FFF] Black Bullet 01 [A34F324CD].mkv")
