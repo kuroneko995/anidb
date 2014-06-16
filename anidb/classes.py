@@ -8,9 +8,9 @@ QUALITY = ['unknown', 'TV', 'DVD', 'BD']
 class Series(object):
     """An anime series. Contain information about all files"""
     
-    def __init__(self, location="", episode_number=99):  
+    def __init__(self, location="", name= "", episode_number=99):  
         """Set default values for a blank series"""
-        self.name = ""
+        self.name = name
         self.location = location
         self.episode_number = episode_number
         self.episode_list = {}
