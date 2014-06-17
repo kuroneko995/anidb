@@ -28,9 +28,9 @@ class Series(object):
            
     def add_episode(self, new_Episode):
         if new_Episode.number in self.episode_list:
-            print "Error. Already have that episode"
+            print self.name + ": Error. Already have that episode"
         else:
-            print "Adding episode:", new_Episode.number
+            print self.name +": Adding episode:", new_Episode.number
             self.episode_list[new_Episode.number] = new_Episode
             
     
