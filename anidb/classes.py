@@ -1,3 +1,9 @@
+'''
+This module is obsolete. I'm keeping it to reuse some of the code.
+Nothing to see here
+'''
+
+
 import sys
 import zlib
 import os
@@ -138,7 +144,7 @@ file
     res TEXT
     grp TEXT #fansub group
     filename TEXT
-    type TEXT
+    type TEXT # file type
     location TEXT
 
 
