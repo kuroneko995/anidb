@@ -100,10 +100,46 @@ class Episode(object):
             return False
             
 """
-For checking directories use
-    os.listdir
-    os.path.isdir
-    path.isfile
-Python has crc32 in stdlib
+Planning for sql tables in sqlite3
+file name local.db
+tables:
+anime (
+    aid INTEGER PRIMARY KEY
+    name TEXT
+    episodes NUMBER
+    year NUMBER
+    romanji_name TEXT
+    kanji_name TEXT
+    )
+   
+
+episode (
+    eid INTEGER PRIMARY KEY
+    epno INTEGER
+    english_name TEXT
+    romanji_name TEXT
+    kanji_name TEXT
+
+file
+    fid INTEGER PRIMARY KEY
+    aid INTEGER 
+    eid INTEGER
+    gid INTEGER
+    size INTEGER
+    ed2k TEXT
+    md5 TEXT
+    sha1 TEXT
+    crc32 TEXT
+    dub TEXT
+    sub TEXT
+    src TEXT 
+    audio TEXT
+    video TEXT
+    res TEXT
+    grp TEXT #fansub group
+    filename TEXT
+    type TEXT
+    location TEXT
+
 
 """
