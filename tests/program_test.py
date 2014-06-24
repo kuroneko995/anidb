@@ -60,10 +60,12 @@ from anidb import GUI
     # #print entry.crc32_date
     # print entry.get_date()
     
-def test_hash():
-    newHashdb = program.Hash_database()
+# def test_hash():
+    # newHashdb = program.Hash_database()
     
-    newHashdb.load("crc32")
-    newHashdb.add_new_folder("crc32", "E:\\Anime\\DVD")
-    newHashdb.display("crc32")
-    newHashdb.save("crc32")
+    # newHashdb.load("crc32")
+    # newHashdb.add_new_folder("crc32", "E:\\Anime\\DVD")
+    # newHashdb.display("crc32")
+    # newHashdb.save("crc32")
+    
+ 

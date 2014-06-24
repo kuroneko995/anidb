@@ -1,64 +1,142 @@
 import socket
 import sys
+import ConfigParser
+import time
 
-try:
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(('', 1444))
-except socket.error:
-    print 'Failed to create socket'
-    sys.exit()
+class UDP_Conn(object):
+
     
-host = 'api.anidb.net'
-port = 9000
-
-"""
-fmask 
-01110000    11111000    11101011    11000000    0000000
-aid         size        quality     dub lang    mylist stuff
-eid         ed2k        source      sub lang
-gid         md5         audio codec
-            sha1        video codec
-            crc32       video res
-                        file type
-
-amask
-11110000    11000000    11110000    11000000
-total ep    romaji name epno        group name
-highest ep  kanji name  epname      group short name
-year                    ep romaji
-type                    ep kanji
-
-amask
-
-
-
-"""
-fmaskB = '01110000111110001110101111000000'
-fmask = '%0*X' % ((len(fmaskB) + 3) // 4, int(fmaskB, 2))
-
-amaskB ='11110000110000001111000011000000'
-amask = hstr = '%0*X' % ((len(amaskB) + 3) // 4, int(amaskB, 2)) 
-
-msg1 = 'AUTH user=ndminh92&pass=darkraven&protover=3&client=anidbfilemanager&clientver=0&nat=1'
-msg2 = 'PING nat=1'
-msg3 = 'FILE fid=977491&fmask='+fmask+'&amask='+amask+'&s=pqhno'
-
-msg = msg2
-
-print msg
-try:
-    s.sendto(msg, (host,port))
-    
-    d = s.recvfrom(1024)
-    reply = d[0]
-    addr = d[1]
-    
-    print 'Server reply: ' + reply
+    def __init__(self, config_file = 'config.txt'):
+        config = ConfigParser.RawConfigParser()
+        config.readfp(open(config_file,'r'))
+        # Get anidb host info
+        self.host = config.get('anidb', 'host')
+        self.port = int(config.get('anidb', 'port'))
+        self.addr = (self.host, self.port)
+        print self.host
+        
+        # Get login info
+        username = config.get('login', 'username')
+        password = config.get('login', 'password')
+        self.auth = "AUTH user=%s&pass=%s&protover=3&client=anidbfilemanager&clientver=0&nat=1&enc=utf-8" % (username, password)
+        
+        self.session = ""
+        self.timer = int(time.time())
+        
+        # Config socket
+        my_port = int(config.get('socket', 'port'))
+        try:
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.s.bind(('', my_port))
+        except socket.error:
+            print 'Failed to create socket'
+            sys.exit()
     
     
-except socket.error, msg:
-    print 'Error Code: ' + str(msg[0]) + ' Message ' + msg[1]
-    sys.exit()
+    def close(self):
+        '''Close socket, end connection. Object is effectively useless'''
+        self.s.close()
+
+    
+    def update_timer(self):
+        self.timer = int(time.time())
+        
+    def send_msg(self, msg):
+        current_time = int(time.time())
+        if current_time - self.timer < 4:
+            print "Waiting for" + str(4 - current_time + self.timer) + "seconds"
+            time.sleep(4 - current_time + self.timer)
+        else:
+            pass
+            
+        self.s.sendto(msg, (self.host, self.port))
+        self.timer = int(time.time())
+        
+    
+    def ping(self):
+        msg = 'PING nat=1'
+        
+        # self.s.sendto(msg,(self.host,self.port))
+        self.send_msg(msg)
+        d = self.s.recvfrom(1024)
+        reply = d[0]
+        return reply # Message part    
+    
+    
+    def get_session(self):
+        msg = self.auth
+        self.send_msg(msg)
+        d = self.s.recvfrom(1024)
+        reply = d[0]
+        print reply
+        self.session = reply.split()[1]
+        return self.session
+        
+    def get_anime_info(self, aid, fields_tuple):
+        '''Return a tuple of unicode strings with value equals to the corresponding fields
+        in fields_tuple
+        '''
+        map = ['aid','unused','year','type','related_aid_list','related_aid_type','category_list','category_weight_list',
+        'romanji_name','kanji_name','eng_name','other_name','short_name_list','synonym_list','retired','retired',
+        'episodes','highest_episode_number','special_ep_count','air_date','end_date','url','picname','category_id_list',
+        'rating','vote_count','temp_rating','temp_vote_count','average_review_rating','review_count','award_list','is_18_restricted',
+        'anime_planet_id','ANN_id','allcinema_id','AnimeNfo_id','unused','unused','unused','date_record_updated',
+        'character_id_list','creator_id_list','main_creator_id_list','main_creator_name_list','unused','unused','unused','unused',
+        'specials_count','credits_count','other_count','trailer_count','parody_count','unused','unused','unused']
+        bitstr = ''
+        wanted_fields = []
+        for field in map:
+            if field in fields_tuple:
+                bitstr += '1'
+                wanted_fields.append(field)
+            else:
+                bitstr += '0'
+        print wanted_fields
+        
+        amask =  '%0*X' % ((len(bitstr) + 3) // 4, int(bitstr, 2)) 
+        msg ="ANIME aid=%d&amask=%s&s=%s" % (aid, amask, self.session)
+        self.send_msg(msg)
+        d = self.s.recvfrom(1024)
+        print d
+        reply = d[0].split('\n')[1] # Ignore first line of reply
+        print reply
+        returned_fields = reply.split('|')
+        print returned_fields
+        result = []
+        for field in fields_tuple:
+            # match the order of the tuples coming in. I don't like this line 
+            result.append(unicode(returned_fields[wanted_fields.index(field)],'utf_8'))
+            
+        
+        return result
+        
+        
+# fmaskB = '01110000111110001110101111000000'
+# fmask = '%0*X' % ((len(fmaskB) + 3) // 4, int(fmaskB, 2))
+
+# amaskB ='11110000110000001111000011000000'
+# amask =  '%0*X' % ((len(amaskB) + 3) // 4, int(amaskB, 2)) 
+
+# msg1 = 'AUTH user=ndminh92&pass=darkraven&protover=3&client=anidbfilemanager&clientver=0&nat=1'
+# msg2 = 'PING nat=1'
+# msg3 = 'FILE fid=977491&fmask='+fmask+'&amask='+amask+'&s=pqhno'
+
+# msg = msg2
+
+# print msg
+# try:
+    # s.sendto(msg, (host,port))
+    
+    # d = s.recvfrom(1024)
+    # reply = d[0]
+    # addr = d[1]
+    
+    # print 'Server reply: ' + reply
+    
+    
+# except socket.error, msg:
+    # print 'Error Code: ' + str(msg[0]) + ' Message ' + msg[1]
+    # sys.exit()
     
     
     
