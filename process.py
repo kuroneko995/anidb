@@ -5,15 +5,19 @@ conn = sqlite3.connect('local_db.db')
 conn.row_factory = sqlite3.Row
 c = conn.cursor()
 
-c.execute("CREATE TABLE IF NOT EXISTS anime (aid INTEGER PRIMARY KEY, romanji_name TEXT, \
-            episodes NUMBER, year NUMBER, eng_name TEXT, kanji_name TEXT)")
-c.execute("CREATE TABLE IF NOT EXISTS episode (eid INTEGER PRIMARY KEY, epno TEXT, \
-            eng_name TEXT, romanji_name TEXT, kanji_name TEXT)")
-c.execute("CREATE TABLE IF NOT EXISTS file (fid INTEGER PRIMARY KEY, aid INTEGER, \
-            eid INTEGER, gid INTEGER, size INTEGER, ed2k TEXT, md5 TEXT, sha1 TEXT, \
-            crc32 TEXT, dub TEXT, sub TEXT, src TEXT, audio TEXT, video TEXT, res TEXT, \
-            grp TEXT, type TEXT)")                                
-
+c.execute("CREATE TABLE IF NOT EXISTS anime (aid INTEGER PRIMARY KEY, \
+                    romanji_name TEXT, episodes NUMBER, year NUMBER, eng_name TEXT,\
+                    kanji_name TEXT)")
+c.execute("CREATE TABLE IF NOT EXISTS episode (eid INTEGER PRIMARY KEY,\
+                    aid INTEGER, epno TEXT, eng_name TEXT, romanji_name TEXT, \
+                    kanji_name TEXT)")
+c.execute("CREATE TABLE IF NOT EXISTS file (fid INTEGER PRIMARY KEY, \
+                    aid INTEGER, eid INTEGER, gid INTEGER, size INTEGER,  \
+                    ed2k TEXT, md5 TEXT, sha1 TEXT, crc32 TEXT, dub TEXT, \
+                    sub TEXT, src TEXT, audio TEXT, video TEXT, res TEXT, \
+                    grp TEXT, file_type TEXT)")                                
+c.execute("CREATE TABLE IF NOT EXISTS job (filename TEXT, fid INTEGER, folder TEXT,\
+                        drive_name TEXT, last_checked DATETIME)")
 f = open('webAOM.txt')
 
 
@@ -38,6 +42,7 @@ for line in f:
         line = line.split('|')
         # print line
         eid = int(line[0][1:])
+        
         epno = unicode(line[1])
         eng_name = unicode(line[2])
         romanji_name = unicode(line[3])
@@ -71,7 +76,9 @@ for line in f:
         row = (fid, aid, eid, gid, size, ed2k, md5, sha1, crc32, dub, sub, \
                 src, audio, video, res, type, grp)
         c.execute("INSERT OR IGNORE INTO file (fid, aid, eid, gid, size, ed2k, md5, sha1, crc32, dub, sub,  \
-                src, audio, video, res, type, grp) VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)", row)
+                src, audio, video, res, file_type, grp) VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)", row)
+        data = (aid, eid)
+        c.execute("UPDATE episode SET aid = ? WHERE eid = ?", data) 
     # else:
         # pass
 

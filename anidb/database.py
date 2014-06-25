@@ -18,14 +18,15 @@ class Local_DB(object):
                     romanji_name TEXT, episodes NUMBER, year NUMBER, eng_name TEXT,\
                     kanji_name TEXT)")
             self.c.execute("CREATE TABLE IF NOT EXISTS episode (eid INTEGER PRIMARY KEY,\
-                    epno TEXT, eng_name TEXT, romanji_name TEXT, kanji_name TEXT)")
+                    aid INTEGER, epno TEXT, eng_name TEXT, romanji_name TEXT, \
+                    kanji_name TEXT)")
             self.c.execute("CREATE TABLE IF NOT EXISTS file (fid INTEGER PRIMARY KEY, \
                     aid INTEGER, eid INTEGER, gid INTEGER, size INTEGER,  \
                     ed2k TEXT, md5 TEXT, sha1 TEXT, crc32 TEXT, dub TEXT, \
                     sub TEXT, src TEXT, audio TEXT, video TEXT, res TEXT, \
-                    grp TEXT, type TEXT)")   
+                    grp TEXT, file_type TEXT)")   
             self.c.execute("CREATE TABLE IF NOT EXISTS job (filename TEXT, fid INTEGER, folder TEXT,\
-                        drive_name TEXT")
+                        drive_name TEXT, last_checked DATETIME)")
         else:
             pass
             
@@ -60,17 +61,19 @@ class Local_DB(object):
         self.conn.commit()
             
     def add_file(self, fid, aid, eid, gid, size, ed2k, md5, sha1, crc32, dub, sub, \
-                src, audio, video, res, type, grp):
+                src, audio, video, res, file_type, grp):
         '''Add an entry to the file table. All string must be in unicode'''
-        for entry in [ed2k, md5, sha1, crc32, dub, sub, src, audio, video, res, type, grp]:
+        print "Database addfile"
+        for entry in [ed2k, md5, sha1, crc32, dub, sub, src, audio, video, res, file_type, grp]:
             if type(entry) != unicode:
                 raise Exception('episode table: Unicode values expected')
                 return
         
-        row = (fid, aid, eid, gid, size, ed2k.upper(), md5.upper(), sha1.upper(), crc32.upper(), dub, sub, \
-                src, audio, video, res, type, grp)
-        c.execute("INSERT OR IGNORE INTO file (fid, aid, eid, gid, size, ed2k, md5, sha1, crc32, dub, sub,  \
-                src, audio, video, res, type, grp) VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)", row)
+        row = (fid, aid, eid, gid, size, ed2k, md5, sha1, crc32, dub, sub, \
+                src, audio, video, res, file_type, grp)
+        self.c.execute("INSERT OR IGNORE INTO file (fid, aid, eid, gid, size, ed2k, md5, sha1, crc32, dub, sub,  \
+                src, audio, video, res, file_type, grp) VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)", row)
+        print "Database addfile done"
         self.conn.commit()
     
     def add_job(self, filename, fid, drive_name, folder):
@@ -81,8 +84,8 @@ class Local_DB(object):
                 return
             
         row = (filename, fid, drive, path)
-        self.c.execute("INSERT OR IGNORE INTO job (filename, fid, drive_name, folder) \
-                    VALUES (?,?,?,?)", row)
+        self.c.execute("INSERT OR IGNORE INTO job (filename, fid, drive_name, folder, last_checked) \
+                    VALUES (?,?,?,?, datetime('now'))", row)
         self.conn.commit()
     
     
@@ -178,3 +181,40 @@ class Local_DB(object):
             for i in range(len(keys)):
                 result[keys[i]] = row[i] 
             return result 
+            
+    def get_info_filename(self, filename, size=0, crc32=""):
+        '''Query for fid based on filename
+        If file name is not unicode will return blank
+        Recommend checking crc32 and size'''
+        if type(filename) != unicode:
+            raise Exception('Filename must be unicode')
+            return {}
+        else:
+            if not (size and crc32): # Search using filename only
+                result = {}
+                data = (filename,)
+                self.c.execute('SELECT * FROM job WHERE filename = ?', data)
+                row = self.c.fetchone()
+                if row != None:
+                    keys = row.keys()
+                    for i in range(len(keys)):
+                        result[keys[i]] = row[i] 
+                # If no result will be empty
+                return result 
+               
+                    
+            elif (size and crc32): #size and crc32 given
+                data = (data, size, unicode(crc32))
+                result = {}
+                self.c.execute('SELECT * FROM job, file WHERE job.filename = ?, \
+                                job.fid = file.fid, file.size = ?, file.crc32 = ?', data)
+                row = self.c.fetchone()
+                if row != None:
+                    keys = row.keys()
+                    for i in range(len(keys)):
+                        result[keys[i]] = row[i] 
+                # If no result will be empty
+                return result 
+                
+            else:
+                pass
