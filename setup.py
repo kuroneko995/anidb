@@ -9,7 +9,7 @@ config = {
     'url': 'URL to get it at.',
     'download_url': 'Where to download it.',
     'author_email': 'ndminh92@gmail.com',
-    'version': '0.1',
+    'version': '0.9',
     'install_requires': ['nose'],
     'packages':['anidb'],
     'py_modules':[],

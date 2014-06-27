@@ -43,3 +43,9 @@ from anidb import database
     # a = localdb.get_info_hash(223886309,'fb29e20a8b9469014e6631aaf516ed51')
     # b = localdb.get_info_aid(a["aid"])
     # print b
+    
+# def test_list_file():
+    # localdb = database.Local_DB('local_db.db')
+    # a = localdb.list_file()
+    # for item in a:
+        # print item

@@ -20,8 +20,9 @@ from anidb import udp_api
     # a.get_session()
     # print file_manager.check_file(mydb, a, "C:\Users\mnguyen\Downloads\New folder\Hataraku Maou-sama! [1080p, FFF]\[FFF] Hataraku Maou-sama! - C09 (1920x1080 Blu-ray H264 FLAC) [79D7BA58].mkv")
     
-def test_scan_folder():
-    mydb = database.Local_DB()
-    a = udp_api.UDP_Conn()
-    a.get_session()
-    file_manager.scan_folder(mydb, a, "C:\Users\mnguyen\Downloads\New folder")
+# def test_scan_folder():
+    # mydb = database.Local_DB()
+    # a = udp_api.UDP_Conn()
+    # a.get_session()
+    # file_manager.scan_folder(mydb, a, "C:\Users\mnguyen\Downloads\New folder")
+  

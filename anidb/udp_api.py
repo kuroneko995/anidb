@@ -13,7 +13,7 @@ class UDP_Conn(object):
         self.host = config.get('anidb', 'host')
         self.port = int(config.get('anidb', 'port'))
         self.addr = (self.host, self.port)
-        print self.host
+        # print self.host
         
         # Get login info
         username = config.get('login', 'username')
@@ -44,7 +44,7 @@ class UDP_Conn(object):
     def send_msg(self, msg):
         current_time = int(time.time())
         if current_time - self.timer < 4:
-            print "Waiting for %d seconds" % (4 - current_time + self.timer)
+            print "UDP request in %d seconds" % (4 - current_time + self.timer)
             time.sleep(4 - current_time + self.timer)
         else:
             pass
@@ -68,7 +68,10 @@ class UDP_Conn(object):
         self.send_msg(msg)
         d = self.s.recvfrom(1024)
         reply = d[0]
-        print reply
+        if reply.split()[0] in ['200', '201']: # Login accepted
+            print "Login successful."
+        else:
+            print "Login failed."
         self.session = reply.split()[1]
         return self.session
         
@@ -97,6 +100,7 @@ class UDP_Conn(object):
         self.send_msg(msg)
         d = self.s.recvfrom(1024)
         if '230 ANIME' in d[0]: # Anime found reply
+            # print "UDP: Anime found "
             reply = d[0].split('\n')[1] # Ignore first line of reply
             returned_fields = reply.split('|')
             result = {}
@@ -118,10 +122,9 @@ class UDP_Conn(object):
         msg = 'EPISODE eid=%d&s=%s' % (eid, self.session)
         self.send_msg(msg)
         d = self.s.recvfrom(1024)
-        print "Message", d[0]
         if '240 EPISODE' in d[0]: # Episode found
             reply = d[0].split('\n')[1]
-            print "Reply %s" % reply
+            # print "UDP: Episode found "
             returned_fields = reply.split('|')
             result = {}
             for field in wanted_fields:
@@ -170,13 +173,13 @@ class UDP_Conn(object):
         wanted_fields.insert(0,'fid')
         
         msg = 'FILE size=%d&ed2k=%s&fmask=%s&amask=%s&s=%s' % (size, ed2k, fmask, amask, self.session) 
-        print "Message is %s" % msg
+       
         self.send_msg(msg)
         d = self.s.recvfrom(1024)
-        print "Message", d[0]
+        
         if '220 FILE' in d[0]: # File found
             reply = d[0].split('\n')[1]
-            print "Reply %s" % reply
+            # print "UDP: File found " 
             returned_fields = reply.split('|')
             result = {}
             for field in fields_list:
@@ -187,64 +190,8 @@ class UDP_Conn(object):
         
 
 
-# msg = msg2
 
-# print msg
-# try:
-    # s.sendto(msg, (host,port))
-    
-    # d = s.recvfrom(1024)
-    # reply = d[0]
-    # addr = d[1]
-    
-    # print 'Server reply: ' + reply
-    
-    
-# except socket.error, msg:
-    # print 'Error Code: ' + str(msg[0]) + ' Message ' + msg[1]
-    # sys.exit()
     
     
     
     
-"""
-Mapping for request
-
-
-        # each line is one byte
-        # only chnage this if the api changes
-map = ['aid','unused','year','type','related_aid_list','related_aid_type','category_list','category_weight_list',
- 'romaji_name','kanji_name','english_name','other_name','short_name_list','synonym_list','retired','retired',
- 'episodes','highest_episode_number','special_ep_count','air_date','end_date','url','picname','category_id_list',
- 'rating','vote_count','temp_rating','temp_vote_count','average_review_rating','review_count','award_list','is_18_restricted',
- 'anime_planet_id','ANN_id','allcinema_id','AnimeNfo_id','unused','unused','unused','date_record_updated',
- 'character_id_list','creator_id_list','main_creator_id_list','main_creator_name_list','unused','unused','unused','unused',
- 'specials_count','credits_count','other_count','trailer_count','parody_count','unused','unused','unused']
-      
-episode
-['eid','aid','length','rating','votes','epno','eng','romaji','kanji','aired','type']
-epno special character S(special), C(credits), T(trailer), P(parody), O(other).
-type 1: regular episode (no prefix), 2: special ("S"), 3: credit ("C"), 4: trailer ("T"), 5: parody ("P"), 6: other ("O")
-      
-    def getFileMapF(self):
-        # each line is one byte
-        # only chnage this if the api changes
-map = ['unused','aid','eid','gid','mylist_id','list_other_episodes','IsDeprecated','state',
-'size','ed2k','md5','sha1','crc32','unused','unused','reserved',
-'quality','source','audio_codec_list','audio_bitrate_list','video_codec','video_bitrate','video_resolution','file_type_extension',
-'dub_language','sub_language','length_in_seconds','description','aired_date','unused','unused','anidb_file_name',
-'mylist_state','mylist_filestate','mylist_viewed','mylist_viewdate','mylist_storage','mylist_source','mylist_other','unused']
-      
-    
-def getFileMapA(self):
-# each line is one byte
-# only chnage this if the api changes
-map = ['anime_total_episodes','highest_episode_number','year','type','related_aid_list','related_aid_type','category_list','reserved',
-'romaji_name','kanji_name','english_name','other_name','short_name_list','synonym_list','retired','retired',
-'epno','ep_name','ep_romaji_name','ep_kanji_name','episode_rating','episode_vote_count','unused','unused',
-'group_name','group_short_name','unused','unused','unused','unused','unused','date_aid_record_updated']
-        
-   
-
-
-"""

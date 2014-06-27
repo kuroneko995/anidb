@@ -52,7 +52,8 @@ def get_file_info(database, udp_conn, size, ed2k):
         return local_info
     else: # Ask anidb
         anidb_info = udp_conn.get_file_info(size, ed2k)
-        if len(anidb_info): # File found on anidb
+        if anidb_info: # File found on anidb
+            print "Get file info: Anidb info found"
             if not database.in_db('anime', int(anidb_info['aid'])): # Anime not in local
                 database.add_anime(int(anidb_info['aid']), anidb_info['romanji_name'], int(anidb_info['anime_total_episodes']), \
                                 anidb_info['year'], anidb_info['english_name'], anidb_info['kanji_name'])
@@ -77,33 +78,34 @@ def check_file(database, udp_conn, file_path):
     folder = unicode(path.split(file_path)[0])
     info = database.get_info_filename(file_name)
     if info: # File in local db found
+        print "File record found in local database"
+        database.add_job(file_name, int(info['fid']), folder[0] , folder)
         return info
     else: # Nothing found. Hash file and search anidb
         size = path.getsize(file_path)
         ed2k = get_ed2k(file_path)
         info = get_file_info(database, udp_conn, size, ed2k)
+        if info: # found on anidb
+            
+            database.add_job(file_name, int(info['fid']), folder[0] , folder)
+        else:
+            print "File information not found"
         return info
     
             
 def scan_folder(database, udp_conn, search_path, file_type = ['mkv','avi','mp4']):
     """Depth first search into search_path to look for anime folders and add
     to database. Ignore file not of the specified file type
-    WORK IN PROGRESS
     """
     directory = []
     directory += [path.join(search_path, branch) for branch in os.listdir(search_path)] 
-    # print "Directory:", directory
+    
     while directory != []:
         file_path = directory.pop()
-        # print "Checking %s" % file_path
         if path.isdir(file_path): #If it is a folder. Add content and move on
-            # print "Directory before:", directory
             directory = [path.join(file_path, branch) for branch in os.listdir(file_path)] + directory
-            # print "Directory after:", directory
         elif path.isfile(file_path): # If it is a file, move on
             file_name = unicode(path.split(file_path)[1])
-            # folder = unicode(path.split(file_path)[0])
-            # Check for file type to avoid search
             correct_type = False
             for tail in file_type:
                 if tail in file_name:
@@ -111,9 +113,8 @@ def scan_folder(database, udp_conn, search_path, file_type = ['mkv','avi','mp4']
                 break
             if not correct_type:
                 continue
-            
-            # print "Checking %s" % file_name
-            print check_file(database, udp_conn, file_path)
+            print "Now checking %s" % file_name
+            check_file(database, udp_conn, file_path)
         else: # If not file or folder, give up
             pass
            

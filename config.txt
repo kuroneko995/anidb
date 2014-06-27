@@ -1,0 +1,10 @@
+[anidb]
+host = api.anidb.net
+port = 9000
+
+[socket]
+port = 1444 
+
+[login]
+username = \
+password = 

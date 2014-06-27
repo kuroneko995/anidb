@@ -63,7 +63,7 @@ class Local_DB(object):
     def add_file(self, fid, aid, eid, gid, size, ed2k, md5, sha1, crc32, dub, sub, \
                 src, audio, video, res, file_type, grp):
         '''Add an entry to the file table. All string must be in unicode'''
-        print "Database addfile"
+        
         for entry in [ed2k, md5, sha1, crc32, dub, sub, src, audio, video, res, file_type, grp]:
             if type(entry) != unicode:
                 raise Exception('episode table: Unicode values expected')
@@ -73,7 +73,7 @@ class Local_DB(object):
                 src, audio, video, res, file_type, grp)
         self.c.execute("INSERT OR IGNORE INTO file (fid, aid, eid, gid, size, ed2k, md5, sha1, crc32, dub, sub,  \
                 src, audio, video, res, file_type, grp) VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)", row)
-        print "Database addfile done"
+        
         self.conn.commit()
     
     def add_job(self, filename, fid, drive_name, folder):
@@ -83,7 +83,7 @@ class Local_DB(object):
                 raise Exception('job table: Unicode values expected')
                 return
             
-        row = (filename, fid, drive, path)
+        row = (filename, fid, drive_name, folder)
         self.c.execute("INSERT OR IGNORE INTO job (filename, fid, drive_name, folder, last_checked) \
                     VALUES (?,?,?,?, datetime('now'))", row)
         self.conn.commit()
@@ -218,3 +218,36 @@ class Local_DB(object):
                 
             else:
                 pass
+                
+                
+    def list_file(self, drive = None):
+        if not drive: # Get everything from database
+            self.c.execute('SELECT anime.romanji_name, anime.episodes, episode.epno, episode.eng_name, file.fid FROM anime, episode, file WHERE ( \
+                            file.eid = episode.eid AND file.aid = anime.aid)')
+            mykeys = ['anime_name', 'anime_episodes', 'epno', 'ep_name', 'fid']
+            dict_list = []
+            for row in self.c:
+                entry = {}
+                for i in range(len(mykeys)):
+                    entry[mykeys[i]] = row[i]
+                dict_list.append(entry)
+            return dict_list
+        else : # select based on storage location
+            pass 
+            
+    def list_job(self, drive = None):
+        if not drive: # Get everything from database
+            self.c.execute('SELECT anime.romanji_name, anime.episodes, episode.epno, episode.eng_name, file.fid,\
+                            job.filename, job.folder, job.last_checked, file.size\
+                            FROM anime, episode, file, job WHERE (file.eid = episode.eid AND file.aid = anime.aid \
+                            AND job.fid = file.fid)')
+            mykeys = ['anime_name', 'anime_episodes', 'epno', 'ep_name', 'fid', 'file_name', 'folder', 'last_checked', 'size']
+            dict_list = []
+            for row in self.c:
+                entry = {}
+                for i in range(len(mykeys)):
+                    entry[mykeys[i]] = row[i]
+                dict_list.append(entry)
+            return dict_list
+        else : # select based on storage location TO BE ADDED
+            pass 
