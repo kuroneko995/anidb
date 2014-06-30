@@ -34,7 +34,7 @@ class Local_DB(object):
       
     def close(self):
         '''Close the database and stop writing. Need to reopen if used again'''
-        self.conn.close
+        self.conn.close()
        
     def add_anime(self, aid, romanji_name, episodes, year, eng_name, kanji_name):
         '''Add an entry to the anime table. All string must be in unicode'''

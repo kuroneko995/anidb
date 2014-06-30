@@ -48,7 +48,7 @@ class UDP_Conn(object):
             time.sleep(4 - current_time + self.timer)
         else:
             pass
-            
+           
         self.s.sendto(msg, (self.host, self.port))
         self.timer = int(time.time())
         

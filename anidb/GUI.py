@@ -1,24 +1,17 @@
 from Tkinter import * ### (1)
 import tkFileDialog
 import ttk
-import subprocess
-import threading
-from anidb import file_manager
-from anidb import database
-from anidb import udp_api
-
-
 
 class GUI_window:
-    def __init__(self, number = 4, file_path = 'local_db.db', new = False):
-        # Load database
-        self.threads = []
-        self.mydb = database.Local_DB(file_path, new)
+    def __init__(self, msg_queue = None, job_list_queue=None, command_queue = None):
+        self.msg_queue = msg_queue
+        self.jobs = job_list_queue
+        self.command_queue = command_queue
         
         
-        
-        # Set up the Frame
+        # Set up the Frames
         self.root = Tk()
+        self.root.protocol("WM_DELETE_WINDOW", self.exitGUI)
         self.text_container = Frame(self.root,height=50)
         self.text_container.pack(side = BOTTOM, expand= False, fill=BOTH )
         self.main_container = Frame(self.root)
@@ -62,35 +55,24 @@ class GUI_window:
         # Set up logging text box
         self.log = Text(self.text_container, height =10)
         
-        sys.stdout = StdoutRedirector(self.log,self.root)
+        
         self.textScrollbar = Scrollbar(self.text_container, orient="vertical", command = self.log.yview)
         self.textScrollbar.pack(side= RIGHT, fill= Y)
         self.log.configure(yscrollcommand=self.textScrollbar.set)
         self.log.pack(fill=X, expand =False)
     
     def connect_udp(self):
-        self.connect = udp_api.UDP_Conn()
-        self.connect.get_session()
+        self.command_queue.put(("CONNECT",))
      
     def open_folder(self):
-        # t = threading.Thread(target=self.open_folder_thread, args=())
-        # self.threads.append(t)
-        # t.start()
         fid = self.table.selection()[0]
-        # print fid
-        # print self.table.get_children('')
         if not fid in self.table.get_children(''): # if a file not an anime selected
-            #folder_path = self.mydb.get_info_filename(
+            
             file_name = unicode(self.table.item(fid,'text'))
-            folder = self.mydb.get_info_filename(file_name)['folder'] 
-            # print "Folder unformatted %s" %folder
-            cmd = 'explorer "%s"' % folder.replace('/','\\')
-            print "Opening folder: %s" % folder
-            subprocess.Popen(cmd)
-        
+            self.command_queue.put(("OPEN_FOLDER",file_name))
+            # print self.command_queue
     
-    def open_folder_thread(self):
-        pass
+
     
     def rehash(self):
         pass
@@ -100,34 +82,34 @@ class GUI_window:
         # self.threads.append(t)
         # t.start()
         file_path = tkFileDialog.askdirectory(initialdir='C:\\')
-        file_manager.scan_folder(self.mydb, self.connect, file_path)
-        a = self.mydb.list_job()
-        for dict in a:
+        if file_path == None: # User press cancel or sth
+            pass
+        else:
+            self.command_queue.put(("ADD_FILES", file_path))
+            
+        
+    def update_table(self, list_job):
+        for dict in list_job:
             if not self.table.exists(dict['fid']): # Update new files added
                 #['anime_name', 'anime_episodes', 'epno', 'ep_name', 'fid']
-                self.addFile(dict['anime_name'], id=dict['fid'], ep_name=dict["file_name"], number=dict["epno"], 
+                self.add_one_entry(dict['anime_name'], id=dict['fid'], ep_name=dict["file_name"], number=dict["epno"], 
                             size=dict['size'], last_checked=dict['last_checked'])
-        print "GUI: Adding files complete"
-        # return file_path
+            
+            # return file_path
         
-    def add_files_thread(self):
-        pass
         
-    def addEntry(self, parent="",id=None, name="", number="", size="", last_checked=""):
-        self.table.insert(parent,0, iid=id,text=name,values=(number,size,last_checked))
-        
-    def addFile(self, anime_name, id=None, ep_name="", number="", size="", last_checked=""):
+    def add_one_entry(self, anime_name, id=None, ep_name="", number="", size="", last_checked=""):
         if not self.table.exists(anime_name): # Parent is non-empty and not exist
             self.table.insert("",0, iid=anime_name, text=anime_name, values=("","",last_checked))
-        self.table.insert(anime_name,0,iid=id,text=ep_name, values=(number, size, last_checked))
+        if not self.table.exists(id):
+            self.table.insert(anime_name,0,iid=id,text=ep_name, values=(number, size, last_checked))
         self.sort_anime()
         self.sort_name()
         
-    def start(self):
-        a = self.mydb.list_job()
-        for dict in a:
+    def start(self,job_list):
+        for dict in job_list:
         #['anime_name', 'anime_episodes', 'epno', 'ep_name', 'fid', 'file_name', 'folder', 'last_checked']
-            self.addFile(dict['anime_name'], id=dict['fid'], ep_name=dict["file_name"], number=dict["epno"], 
+            self.add_one_entry(dict['anime_name'], id=dict['fid'], ep_name=dict["file_name"], number=dict["epno"], 
                     size=dict['size'], last_checked=dict['last_checked'])
         
         # Sort items before starting
@@ -142,21 +124,14 @@ class GUI_window:
     
     def sort_name(self):
         l = [k for k in self.table.get_children()]
-        
         l.sort()
-
         # rearrange items in sorted positions
         for index, k in enumerate(l):
-            self.table.move(k, "", index)
-
+            self.table.move(k, "", index)       
         
-        
-    
     def treeview_sort_column(self, col, reverse, parent =""):
         l = [(self.table.set(k, col), k) for k in self.table.get_children(parent)]
-        
         l.sort(reverse=reverse)
-
         # rearrange items in sorted positions
         for index, (val, k) in enumerate(l):
             self.table.move(k, parent, index)
@@ -166,23 +141,23 @@ class GUI_window:
                    self.treeview_sort_column(col, not reverse))
     
 
+    def update_log(self):
+        while self.msg_queue.qsize():
+            try:
+                msg = self.msg_queue.get(0)
+                self.log.insert('end',msg)
+                self.log.see('end')
+            except Queue.Empty:
+                pass
+        
+    def exitGUI(self):
+        self.command_queue.put(('EXIT',))
+        self.root.quit()
 
-
-    # sys.stdout = StdoutRedirector( self )
-
-class StdoutRedirector(object):
-    def __init__(self,text_widget,root):
-        self.text_space = text_widget
-        self.root = root
-
-    def write(self,string):
-        self.text_space.insert('end', string)
-        self.text_space.see('end')
-        self.root.update_idletasks()
         
 
-def main():
-    newGUI = GUI_window('local_db.db')
-    newGUI.start()
+# def main():
+    # newGUI = GUI_window('local_db.db')
+    # newGUI.start()
     
-main()
+# main()

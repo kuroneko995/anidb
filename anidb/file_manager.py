@@ -61,7 +61,7 @@ def get_file_info(database, udp_conn, size, ed2k):
                 database.add_episode(int(anidb_info['eid']), anidb_info['epno'], anidb_info['ep_name'], \
                                 anidb_info['ep_romanji_name'], anidb_info['ep_kanji_name'])
             # Add file info to local database
-            print "Adding to local db"
+            # print "Adding to local db"
             database.add_file(int(anidb_info['fid']), int(anidb_info['aid']), int(anidb_info['eid']), int(anidb_info['gid']),\
                                 int(anidb_info['size']), anidb_info['ed2k'], anidb_info['md5'], \
                                 anidb_info['sha1'], anidb_info['crc32'], anidb_info['dub'], anidb_info['sub'], \

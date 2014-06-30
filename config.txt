@@ -6,5 +6,5 @@ port = 9000
 port = 1444 
 
 [login]
-username = \
-password = 
+username = ndminh92
+password = darkraven
