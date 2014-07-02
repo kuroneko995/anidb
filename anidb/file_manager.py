@@ -73,16 +73,20 @@ def get_file_info(database, udp_conn, size, ed2k):
             return {}
             
 def check_file(database, udp_conn, file_path):
-    """Check file info to see if in local db. Otherwise search anidb"""
+    """Check file info to see if in local db. Otherwise search anidb
+    First round: test name and size
+    Second round: test ed2k and size. Search local
+    """
+    size = path.getsize(file_path)
     file_name = unicode(path.split(file_path)[1])
     folder = unicode(path.split(file_path)[0])
-    info = database.get_info_filename(file_name)
+    info = database.get_info_filename(file_name ,size)
+    
     if info: # File in local db found
         print "File record found in local database"
         database.add_job(file_name, int(info['fid']), folder[0] , folder)
         return info
     else: # Nothing found. Hash file and search anidb
-        size = path.getsize(file_path)
         ed2k = get_ed2k(file_path)
         info = get_file_info(database, udp_conn, size, ed2k)
         if info: # found on anidb
@@ -119,7 +123,7 @@ def scan_folder(database, udp_conn, search_path, file_type = ['mkv','avi','mp4']
             pass
            
 
-           
+
             
 def get_ed2k(file_path):
     ''' Use code taken from http://pydoc.net/Python/pyanidb/0.2.0/pyanidb.hash/

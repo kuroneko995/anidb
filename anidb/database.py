@@ -234,7 +234,20 @@ class Local_DB(object):
             return dict_list
         else : # select based on storage location
             pass 
-            
+        
+    def delete_job(self, file_name):
+        file_name = unicode(file_name)
+        data = (file_name,)
+        self.c.execute('DELETE * FROM job WHERE filename = ?',data)
+        self.conn.commit()
+    
+    def update_job(self, file_name):
+        file_name = unicode(file_name)
+        data = (file_name,)
+        self.c.execute("UPDATE job SET last_checked = datetime('now') \
+                        WHERE filename = ?", data)
+        self.conn.commit()
+        
     def list_job(self, drive = None):
         if not drive: # Get everything from database
             self.c.execute('SELECT anime.romanji_name, anime.episodes, episode.epno, episode.eng_name, file.fid,\

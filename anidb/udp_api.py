@@ -9,11 +9,11 @@ class UDP_Conn(object):
     def __init__(self, config_file = 'config.txt'):
         config = ConfigParser.RawConfigParser()
         config.readfp(open(config_file,'r'))
+        
         # Get anidb host info
         self.host = config.get('anidb', 'host')
         self.port = int(config.get('anidb', 'port'))
         self.addr = (self.host, self.port)
-        # print self.host
         
         # Get login info
         username = config.get('login', 'username')
@@ -23,14 +23,14 @@ class UDP_Conn(object):
         self.session = ""
         self.timer = int(time.time())
         
-        # Config socket
+        # Configure socket
         my_port = int(config.get('socket', 'port'))
         try:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.s.bind(('', my_port))
         except socket.error:
             print 'Failed to create socket'
-            sys.exit()
+            
     
     
     def close(self):
@@ -39,9 +39,11 @@ class UDP_Conn(object):
 
     
     def update_timer(self):
+        '''Update timer. Use to space out UDP request'''
         self.timer = int(time.time())
         
     def send_msg(self, msg):
+        '''Send UDP package. Only send one for every 4s'''
         current_time = int(time.time())
         if current_time - self.timer < 4:
             print "UDP request in %d seconds" % (4 - current_time + self.timer)
@@ -54,16 +56,15 @@ class UDP_Conn(object):
         
     
     def ping(self):
+        '''Ping server. Used to keep session alive'''
         msg = 'PING nat=1'
-        
-        # self.s.sendto(msg,(self.host,self.port))
         self.send_msg(msg)
         d = self.s.recvfrom(1024)
         reply = d[0]
         return reply # Message part    
     
-    
     def get_session(self):
+        '''Update self.session with anidb session id'''
         msg = self.auth
         self.send_msg(msg)
         d = self.s.recvfrom(1024)

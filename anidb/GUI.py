@@ -1,13 +1,14 @@
 from Tkinter import * ### (1)
+import time
 import tkFileDialog
 import ttk
 
 class GUI_window:
-    def __init__(self, msg_queue = None, job_list_queue=None, command_queue = None):
+    def __init__(self, msg_queue = None, job_list_queue=None, command_queue = None, lock =None):
         self.msg_queue = msg_queue
         self.jobs = job_list_queue
         self.command_queue = command_queue
-        
+        self.lock = lock
         
         # Set up the Frames
         self.root = Tk()
@@ -28,14 +29,11 @@ class GUI_window:
         # Columns in the TreeView
         self.table.heading("#0", text="Name")
         self.table.column("number", stretch=False, width = 30)
-        self.table.heading("number", text="#",command=lambda: \
-                     self.treeview_sort_column( "number", False))
+        self.table.heading("number", text="#",)
         self.table.column("size", stretch=False,width =60)
-        self.table.heading("size", text="Size (KB)",command=lambda: \
-                     self.treeview_sort_column( "size", False))
+        self.table.heading("size", text="Size (KB)")
         self.table.column("last_checked", stretch=False, width=120)
-        self.table.heading("last_checked", text="Last checked",command=lambda: \
-                     self.treeview_sort_column( "last_checked", False))
+        self.table.heading("last_checked", text="Last checked")
         
         # Set up scrollbar
         self.tableScrollbar = Scrollbar(self.main_container, orient="vertical", command = self.table.yview)
@@ -52,10 +50,17 @@ class GUI_window:
         self.bReHash.pack(side=LEFT)
         self.bAddFiles.pack(side=LEFT)
         self.bConnectUDP.pack(side=LEFT)
+        
+        self.do_show_all = BooleanVar()
+        self.bshowAll = Checkbutton(self.button_container, text='Show unavailable files', variable = self.do_show_all,command=self.show_unavailable)
+        self.bshowAll.select()
+        self.bshowAll.pack(side=LEFT)
+        
+        # self.bupdate_view = Button(self.button_container, text='Update view', command=self.show_unavailable)
+        # self.bupdate_view.pack(side=LEFT)
+        
         # Set up logging text box
         self.log = Text(self.text_container, height =10)
-        
-        
         self.textScrollbar = Scrollbar(self.text_container, orient="vertical", command = self.log.yview)
         self.textScrollbar.pack(side= RIGHT, fill= Y)
         self.log.configure(yscrollcommand=self.textScrollbar.set)
@@ -65,17 +70,22 @@ class GUI_window:
         self.command_queue.put(("CONNECT",))
      
     def open_folder(self):
-        fid = self.table.selection()[0]
+        if self.table.selection():
+            fid = self.table.selection()[0]
+        else:
+            return
         if not fid in self.table.get_children(''): # if a file not an anime selected
             
             file_name = unicode(self.table.item(fid,'text'))
             self.command_queue.put(("OPEN_FOLDER",file_name))
             # print self.command_queue
     
-
-    
     def rehash(self):
-        pass
+        fid = self.table.selection()
+        if not fid in self.table.get_children(''): # if a file not an anime selected
+            file_name = self.table.item(fid,'text')
+            self.command_queue.put(("REHASH",file_name))
+        
         
     def add_files(self):
         # t = threading.Thread(target=self.add_files_thread, args=())
@@ -86,25 +96,39 @@ class GUI_window:
             pass
         else:
             self.command_queue.put(("ADD_FILES", file_path))
-            
+    
+    def show_unavailable(self):
+        
+        self.command_queue.put(("SHOW_ALL", self.do_show_all.get()))
+        
         
     def update_table(self, list_job):
+        self.lock.acquire()
+        map(self.table.delete, self.table.get_children())
+
         for dict in list_job:
-            if not self.table.exists(dict['fid']): # Update new files added
+            fid = dict['fid']
+            if not self.table.exists(fid): # Add new files entry
                 #['anime_name', 'anime_episodes', 'epno', 'ep_name', 'fid']
                 self.add_one_entry(dict['anime_name'], id=dict['fid'], ep_name=dict["file_name"], number=dict["epno"], 
                             size=dict['size'], last_checked=dict['last_checked'])
-            
+            else: # Update old entry
+                if not fid in self.table.get_children(''):
+                   
+                    self.table.item(fid,text=dict['file_name'])
+                    data = (dict['epno'],dict['size'],dict['last_checked'])
+                    self.table.item(fid,values=data)
             # return file_path
-        
+        self.sort_anime()
+        self.sort_name()
+        self.lock.release()
         
     def add_one_entry(self, anime_name, id=None, ep_name="", number="", size="", last_checked=""):
         if not self.table.exists(anime_name): # Parent is non-empty and not exist
             self.table.insert("",0, iid=anime_name, text=anime_name, values=("","",last_checked))
         if not self.table.exists(id):
             self.table.insert(anime_name,0,iid=id,text=ep_name, values=(number, size, last_checked))
-        self.sort_anime()
-        self.sort_name()
+        
         
     def start(self,job_list):
         for dict in job_list:
@@ -120,7 +144,7 @@ class GUI_window:
     def sort_anime(self):
         '''Sort episodes in each anime'''
         for item in self.table.get_children():
-            self.treeview_sort_column("number",False, parent=item)
+            self.treeview_sort_column("number",False, item)
     
     def sort_name(self):
         l = [k for k in self.table.get_children()]
@@ -129,7 +153,7 @@ class GUI_window:
         for index, k in enumerate(l):
             self.table.move(k, "", index)       
         
-    def treeview_sort_column(self, col, reverse, parent =""):
+    def treeview_sort_column(self, col, reverse, parent):
         l = [(self.table.set(k, col), k) for k in self.table.get_children(parent)]
         l.sort(reverse=reverse)
         # rearrange items in sorted positions
@@ -149,6 +173,7 @@ class GUI_window:
                 self.log.see('end')
             except Queue.Empty:
                 pass
+        # self.root.after(500, self.update_log)
         
     def exitGUI(self):
         self.command_queue.put(('EXIT',))
