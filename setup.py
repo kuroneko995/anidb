@@ -1,10 +1,11 @@
 try:
     from setuptools import setup
+    import py2exe
 except ImportError:
     from distutils.core import setup
     
 config = {
-    'description': 'anidb project',
+    'description': 'anidb',
     'author': 'Dang Minh Nguyen',
     'url': 'URL to get it at.',
     'download_url': 'Where to download it.',
@@ -14,7 +15,8 @@ config = {
     'packages':['anidb'],
     'py_modules':[],
     'scripts':[],
-    'name': 'anidb_project'
+    'name': 'anidb_project',
+    'console':['program.py']
 }
 
 setup(**config)

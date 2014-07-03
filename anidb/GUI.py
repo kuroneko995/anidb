@@ -31,7 +31,7 @@ class GUI_window:
         self.table.column("number", stretch=False, width = 30)
         self.table.heading("number", text="#",)
         self.table.column("size", stretch=False,width =60)
-        self.table.heading("size", text="Size (KB)")
+        self.table.heading("size", text="Size (MB)")
         self.table.column("last_checked", stretch=False, width=120)
         self.table.heading("last_checked", text="Last checked")
         
@@ -81,8 +81,9 @@ class GUI_window:
             # print self.command_queue
     
     def rehash(self):
-        fid = self.table.selection()
-        if not fid in self.table.get_children(''): # if a file not an anime selected
+        fid = self.table.selection()[0] # Selection always return a dictionary. Need to pick first item
+        
+        if not fid in self.table.get_children(): # if a file not an anime selected
             file_name = self.table.item(fid,'text')
             self.command_queue.put(("REHASH",file_name))
         
@@ -106,46 +107,50 @@ class GUI_window:
         self.lock.acquire()
         map(self.table.delete, self.table.get_children())
 
-        for dict in list_job:
+        for dict in list_job.values():
             fid = dict['fid']
             if not self.table.exists(fid): # Add new files entry
                 #['anime_name', 'anime_episodes', 'epno', 'ep_name', 'fid']
                 self.add_one_entry(dict['anime_name'], id=dict['fid'], ep_name=dict["file_name"], number=dict["epno"], 
-                            size=dict['size'], last_checked=dict['last_checked'])
-            else: # Update old entry
-                if not fid in self.table.get_children(''):
-                   
-                    self.table.item(fid,text=dict['file_name'])
-                    data = (dict['epno'],dict['size'],dict['last_checked'])
-                    self.table.item(fid,values=data)
-            # return file_path
-        self.sort_anime()
+                            size=(int(dict['size'])/1000000), last_checked=dict['last_checked'])
+            
+        self.sort_episodes()
         self.sort_name()
         self.lock.release()
         
+    def update_entry(self, iid, name=None, number=None, size=None, last_checked=None):
+        if name:
+            self.table.set(iid, '#0', name)
+        if number:
+            self.table.set(iid, 'number', number)
+        if size:
+            self.table.set(iid, 'size', size)
+        if last_checked:
+            self.table.set(iid, 'last_checked', last_checked)
+            
     def add_one_entry(self, anime_name, id=None, ep_name="", number="", size="", last_checked=""):
         if not self.table.exists(anime_name): # Parent is non-empty and not exist
             self.table.insert("",0, iid=anime_name, text=anime_name, values=("","",last_checked))
         if not self.table.exists(id):
-            self.table.insert(anime_name,0,iid=id,text=ep_name, values=(number, size, last_checked))
+            self.table.insert(anime_name,0,iid=id,text=ep_name, values=(number, int(size), last_checked))
         
         
     def start(self,job_list):
-        for dict in job_list:
-        #['anime_name', 'anime_episodes', 'epno', 'ep_name', 'fid', 'file_name', 'folder', 'last_checked']
-            self.add_one_entry(dict['anime_name'], id=dict['fid'], ep_name=dict["file_name"], number=dict["epno"], 
-                    size=dict['size'], last_checked=dict['last_checked'])
-        
-        # Sort items before starting
-        self.sort_anime()
-        self.sort_name()
+        self.update_table(job_list)
         self.root.mainloop()
 
-    def sort_anime(self):
-        '''Sort episodes in each anime'''
-        for item in self.table.get_children():
-            self.treeview_sort_column("number",False, item)
-    
+    def sort_episodes(self):
+        '''Sort episodes in each anime. Add total size to anime item'''
+        for anime in self.table.get_children():
+            self.sort_column("number",False, anime)
+            total_size = 0
+            number = 0
+            for episode in self.table.get_children(anime):
+                total_size += int(self.table.set(episode,'size'))
+                number += 1
+            self.table.set(anime,'number',number)
+            self.table.set(anime,'size',total_size)
+        
     def sort_name(self):
         l = [k for k in self.table.get_children()]
         l.sort()
@@ -153,7 +158,7 @@ class GUI_window:
         for index, k in enumerate(l):
             self.table.move(k, "", index)       
         
-    def treeview_sort_column(self, col, reverse, parent):
+    def sort_column(self, col, reverse, parent):
         l = [(self.table.set(k, col), k) for k in self.table.get_children(parent)]
         l.sort(reverse=reverse)
         # rearrange items in sorted positions
@@ -161,8 +166,7 @@ class GUI_window:
             self.table.move(k, parent, index)
 
         # reverse sort next time
-        self.table.heading(col, command=lambda: \
-                   self.treeview_sort_column(col, not reverse))
+       
     
 
     def update_log(self):

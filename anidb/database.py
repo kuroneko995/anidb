@@ -1,4 +1,6 @@
 import sqlite3
+from datetime import datetime
+import time
 
 class Local_DB(object):
 
@@ -83,9 +85,13 @@ class Local_DB(object):
                 raise Exception('job table: Unicode values expected')
                 return
             
-        row = (filename, fid, drive_name, folder)
+        ctime = datetime.utcnow()
+        ctime = ctime.replace(microsecond = 0)
+        ctime = ctime.isoformat().replace('T', ' ')
+        
+        row = (filename, fid, drive_name, folder, ctime)
         self.c.execute("INSERT OR IGNORE INTO job (filename, fid, drive_name, folder, last_checked) \
-                    VALUES (?,?,?,?, datetime('now'))", row)
+                    VALUES (?,?,?,?,?)", row)
         self.conn.commit()
     
     
@@ -243,8 +249,13 @@ class Local_DB(object):
     
     def update_job(self, file_name):
         file_name = unicode(file_name)
-        data = (file_name,)
-        self.c.execute("UPDATE job SET last_checked = datetime('now') \
+        
+        ctime = datetime.utcnow()
+        ctime = ctime.replace(microsecond = 0)
+        ctime = ctime.isoformat().replace('T', ' ')
+
+        data = ( ctime,file_name)
+        self.c.execute("UPDATE job SET last_checked = datetime(?) \
                         WHERE filename = ?", data)
         self.conn.commit()
         
@@ -255,12 +266,23 @@ class Local_DB(object):
                             FROM anime, episode, file, job WHERE (file.eid = episode.eid AND file.aid = anime.aid \
                             AND job.fid = file.fid)')
             mykeys = ['anime_name', 'anime_episodes', 'epno', 'ep_name', 'fid', 'file_name', 'folder', 'last_checked', 'size']
-            dict_list = []
+            dict_list = {}
             for row in self.c:
                 entry = {}
                 for i in range(len(mykeys)):
                     entry[mykeys[i]] = row[i]
-                dict_list.append(entry)
+                # Return local time
+                timestr = entry['last_checked']
+                d = datetime.strptime(timestr, "%Y-%m-%d %H:%M:%S")
+                d = datetime_from_utc_to_local(d)
+                entry['last_checked'] = str(d)
+                
+                dict_list[entry['file_name']] = entry
             return dict_list
         else : # select based on storage location TO BE ADDED
             pass 
+            
+def datetime_from_utc_to_local(utc_datetime):
+    now_timestamp = time.time()
+    offset = datetime.fromtimestamp(now_timestamp) - datetime.utcfromtimestamp(now_timestamp)
+    return utc_datetime + offset

@@ -3,6 +3,10 @@ import Queue
 import time
 import sys
 import subprocess
+from datetime import datetime
+import time
+
+
 from os import path
 from anidb import GUI
 from anidb import database
@@ -12,8 +16,10 @@ from anidb import file_manager
 
 class Program(object):
     def __init__(self, file_path = 'local_db.db', new = False):
-     
-        self.mydb = database.Local_DB(file_path, new)
+        if path.isfile(file_path):
+            self.mydb = database.Local_DB(file_path,new=False)
+        else:   
+            self.mydb = database.Local_DB(file_path,new=True)
         self.all_job = self.mydb.list_job()
         self.mydb.close()
         self.db_path = file_path
@@ -34,14 +40,12 @@ class Program(object):
         sys.stdout = StdoutRedirector(self.msg_queue)
         self.thread_command = threading.Thread(target=self.monitor_command)
         self.thread_command.start()
-        
-        
-        
-        self.only_available_job = []
-        for dict in self.all_job:
+
+        self.only_available_job = {}
+        for dict in self.all_job.values():
             file_path = path.join(dict['folder'],dict['file_name'])
             if path.isfile(file_path):
-                self.only_available_job.append(dict)
+                self.only_available_job[dict['file_name']] = dict
             else:
                 pass
         
@@ -116,10 +120,11 @@ class Program(object):
                 print "File have changed"
                 self.mydb.delete_job(file_name)
                 file_manager.check_file(self.mydb, self.connect, file_path)  
+            self.update_job_lib()
+            self.GUI.update_entry(fid, last_checked = self.all_job[file_name]['last_checked'])
         else:
             print "Rehash: File not found"
-        self.update_job_lib()
-        self.reload_table()
+        
         
     def showall(self):
         if self.show_all:
@@ -138,11 +143,11 @@ class Program(object):
         
     def update_job_lib(self):
         self.all_job = self.mydb.list_job()
-        self.only_available_job = []
-        for dict in self.all_job:
+        self.only_available_job = {}
+        for dict in self.all_job.values():
             file_path = path.join(dict['folder'],dict['file_name'])
             if path.isfile(file_path):
-                self.only_available_job.append(dict)
+                self.only_available_job[dict['file_name']] = dict
             else:
                 pass
     
